@@ -1,0 +1,114 @@
+{
+  "objects": [
+    {
+      "id": "l2m3",
+      "categoryId": null,
+      "name": "OTG Group",
+      "desc": "Office Technology Group"
+    },
+    {
+      "id": "m3n4",
+      "categoryId": "2e92",
+      "name": "M250-8",
+      "desc": "Conference Room"
+    },
+    {
+      "id": "m3n5",
+      "categoryId": "6adf",
+      "name": "Graphics",
+      "desc": "Printing and Graphics Art Unit"
+    },
+    {
+      "id": "m3n7",
+      "categoryId": "9885",
+      "name": "OT&SSD Manager",
+      "desc": "OT&SSD Manager Room"
+    },
+    {
+      "id": "m3n8",
+      "categoryId": "2e92",
+      "name": "M210-G",
+      "desc": "Conference Room"
+    },
+    {
+      "id": "m3n9",
+      "categoryId": "856b",
+      "name": "Buldg. Services Team",
+      "desc": "Building Services Team"
+    },
+    {
+      "id": "m4n1",
+      "categoryId": "856b",
+      "name": "ISA Team",
+      "desc": "ISA Team"
+    },
+    {
+      "id": "m4n2",
+      "categoryId": "9885",
+      "name": "Director Office",
+      "desc": "Director OFfice Room"
+    },
+    {
+      "id": "m4n3",
+      "categoryId": null,
+      "name": "HR Group",
+      "desc": "Human Resource Group"
+    },
+    {
+      "id": "m4n4",
+      "categoryId": "2e92",
+      "name": "M280-8",
+      "desc": "Conference Room"
+    },
+    {
+      "id": "m4n5",
+      "categoryId": "40cd",
+      "name": "Men1",
+      "desc": "Men Washroom"
+    },
+    {
+      "id": "m4n6",
+      "categoryId": "40cd",
+      "name": "Wmn1",
+      "desc": "Women Washroom"
+    },
+    {
+      "id": "m4n7",
+      "categoryId": "40cd",
+      "name": "Men2",
+      "desc": "Men Washroom"
+    },
+    {
+      "id": "m4n8",
+      "categoryId": "40cd",
+      "name": "Wmn2",
+      "desc": "Women Washroom"
+    }
+  ],
+  "categories": [
+    {
+      "id": "e753",
+      "name": "Entrace"
+    },
+    {
+      "id": "2e92",
+      "name": "Conference Room"
+    },
+    {
+      "id": "6adf",
+      "name": "Div"
+    },
+    {
+      "id": "9885",
+      "name": "Room"
+    },
+    {
+      "id": "40cd",
+      "name": "Washroom"
+    },
+    {
+      "id": "856b",
+      "name": "Team"
+    }
+  ]
+}

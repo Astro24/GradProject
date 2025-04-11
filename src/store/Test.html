@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Coordinate Capture with Paths</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./output.css" rel="stylesheet">
+</head>
+<body class="flex flex-col items-center p-5">
+    <h1 class="text-2xl font-bold mb-4">SVG Coordinate Capture with Paths</h1>
+    <input type="file" id="fileInput" accept=".svg" class="mb-4 p-2 border rounded">
+    <div id="svgContainer" class="border p-2 overflow-auto mb-4" style="width: 1461.95px; height: 1149.136px;"></div>
+    <button id="togglePointButton" class="p-2 bg-yellow-500 text-white rounded mb-2">Switch to End Point</button>
+    <button id="manualConnectButton" class="p-2 bg-purple-500 text-white rounded mb-2">Enable Manual Connect</button>
+    <button id="saveButton" class="p-2 bg-green-500 text-white rounded mb-2">Save Path</button>
+    <button id="undoButton" class="p-2 bg-red-500 text-white rounded mb-2">Undo</button>
+    <button id="submitButton" class="p-2 bg-blue-500 text-white rounded">Submit</button>
+
+    <script>
+        let currentPath = [];
+        const paths = [];
+        const allPoints = [];
+        const allEdges = [];
+
+        let pointCounter = parseInt(localStorage.getItem('pointCounter')) || 1;
+        let linkCounter = parseInt(localStorage.getItem('linkCounter')) || 1;
+        let objectCounter = parseInt(localStorage.getItem('objectCounter')) || 1;
+
+        let isEndPoint = false;
+        let isManualConnect = false;
+        let lastRedPoint = null;
+        let selectedPoint = null;
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'image/svg+xml') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const svgContent = e.target.result;
+                    displaySVG(svgContent);
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please select a valid SVG file.');
+            }
+        });
+
+        function displaySVG(svgContent) {
+            const container = document.getElementById('svgContainer');
+            container.innerHTML = ''; // Clear previous content if any
+
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+            const svgElement = svgDoc.documentElement;
+
+            svgElement.setAttribute('width', '1461.95');
+            svgElement.setAttribute('height', '1149.136');
+
+            svgElement.addEventListener('mousemove', function(event) {
+                const { x, y } = aimAssist(event, svgElement);
+                svgElement.style.cursor = 'crosshair';
+                if (x !== null && y !== null) {
+                    svgElement.style.cursor = 'pointer';
+                }
+            });
+
+            svgElement.addEventListener('click', function(event) {
+                if (isManualConnect) return; // Do not add points in manual connect mode
+
+                const { x, y } = aimAssist(event, svgElement);
+                if (x === null || y === null) return; // Ignore clicks when aim assist is not active
+
+                let objectName = null;
+                if (isEndPoint) {
+                    objectName = prompt('Enter the object name:');
+                    if (!objectName) {
+                        alert('Object name is required for end points.');
+                        return;
+                    }
+                    objectCounter++;
+                }
+
+                const point = { id: `v${pointCounter}`, objectName: objectName, cx: x, cy: y, color: isEndPoint ? 'blue' : 'red' };
+                pointCounter++;
+                currentPath.push(point);
+                allPoints.push(point);
+
+                highlightPoint(svgElement, point);
+
+                if (lastRedPoint) {
+                    drawLine(svgElement, lastRedPoint, point, 'yellow');
+                    const edge = { id: `e${linkCounter}`, from: lastRedPoint.id, to: point.id };
+                    paths.push(edge);
+                    allEdges.push(edge);
+                    linkCounter++;
+                }
+
+                lastRedPoint = isEndPoint ? null : point;
+
+                localStorage.setItem('pointCounter', pointCounter);
+                localStorage.setItem('linkCounter', linkCounter);
+                localStorage.setItem('objectCounter', objectCounter);
+            });
+
+            container.appendChild(svgElement);
+        }
+
+        function aimAssist(event, svgElement) {
+            const rect = svgElement.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const radius = 10; // Radius within which aim assist snaps
+
+            let closestPoint = null;
+            let minDist = Infinity;
+
+            for (const point of allPoints) {
+                const dist = Math.sqrt(Math.pow(point.cx - mouseX, 2) + Math.pow(point.cy - mouseY, 2));
+                if (dist < radius && dist < minDist) {
+                    closestPoint = point;
+                    minDist = dist;
+                }
+            }
+
+            if (closestPoint) {
+                return { x: closestPoint.cx, y: closestPoint.cy };
+            } else {
+                return { x: mouseX, y: mouseY };
+            }
+        }
+
+        function highlightPoint(svgElement, point) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', point.cx);
+            circle.setAttribute('cy', point.cy);
+            circle.setAttribute('r', '5');
+            circle.setAttribute('fill', point.color);
+            circle.setAttribute('data-id', point.id);
+            circle.addEventListener('click', function(event) {
+                if (isManualConnect) {
+                    handleManualConnect(point, svgElement);
+                }
+                event.stopPropagation();
+            });
+            svgElement.appendChild(circle);
+        }
+
+        function drawLine(svgElement, point1, point2, color) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', point1.cx);
+            line.setAttribute('y1', point1.cy);
+            line.setAttribute('x2', point2.cx);
+            line.setAttribute('y2', point2.cy);
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', '2');
+            line.setAttribute('data-id', `e${linkCounter - 1}`);
+            svgElement.appendChild(line);
+        }
+
+        function handleManualConnect(point, svgElement) {
+            if (!selectedPoint) {
+                selectedPoint = point;
+                highlightPoint(svgElement, { ...point, color: 'orange' });
+            } else {
+                if (selectedPoint !== point) {
+                    drawLine(svgElement, selectedPoint, point, 'yellow');
+                    const edge = { id: `e${linkCounter}`, from: selectedPoint.id, to: point.id };
+                    paths.push(edge);
+                    allEdges.push(edge);
+                    linkCounter++;
+                    highlightPoint(svgElement, selectedPoint); // Reset the color
+                    highlightPoint(svgElement, point); // Highlight the second point with its original color
+                }
+                selectedPoint = null;
+            }
+        }
+
+        document.getElementById('togglePointButton').addEventListener('click', function() {
+            isEndPoint = !isEndPoint;
+            document.getElementById('togglePointButton').textContent = isEndPoint ? 'Switch to Regular Point' : 'Switch to End Point';
+        });
+
+        document.getElementById('manualConnectButton').addEventListener('click', function() {
+            isManualConnect = !isManualConnect;
+            document.getElementById('manualConnectButton').textContent = isManualConnect ? 'Disable Manual Connect' : 'Enable Manual Connect';
+        });
+
+        document.getElementById('saveButton').addEventListener('click', function() {
+            if (currentPath.length === 0) {
+                alert('No path to save.');
+                return;
+            }
+
+            const svgElement = document.querySelector('#svgContainer svg');
+            currentPath.forEach(point => {
+                point.color = 'green'; // Change color to green
+                highlightPoint(svgElement, { ...point, color: 'green' }); // Ensure the point is highlighted in green
+            });
+
+            paths.push({ path: currentPath });
+            currentPath = [];
+            lastRedPoint = null;
+            alert('Path saved. You can start a new path.');
+        });
+
+        document.getElementById('undoButton').addEventListener('click', function() {
+            if (currentPath.length === 0) {
+                alert('No point to undo.');
+                return;
+            }
+
+            const lastPoint = currentPath.pop();
+            allPoints.pop();
+
+            const svgElement = document.querySelector('#svgContainer svg');
+            const circles = svgElement.querySelectorAll('circle');
+            circles.forEach(circle => {
+                if (circle.getAttribute('data-id') === lastPoint.id) {
+                    svgElement.removeChild(circle);
+                }
+            });
+
+            const lines = svgElement.querySelectorAll('line');
+            lines.forEach(line => {
+                if (line.getAttribute('data-id') === `e${linkCounter - 1}`) {
+                    svgElement.removeChild(line);
+                }
+            });
+
+            lastRedPoint = currentPath.length > 0 ? currentPath[currentPath.length - 1] : null;
+        });
+
+        document.getElementById('submitButton').addEventListener('click', function() {
+            if (paths.length === 0) {
+                alert('No paths to submit.');
+                return;
+            }
+
+            const vertices = allPoints.map(point => ({
+                id: point.id,
+                objectName: point.objectName || null,
+                cx: point.cx,
+                cy: point.cy
+            }));
+
+            const edges = allEdges.map(edge => ({
+                id: edge.id,
+                from: edge.from,
+                to: edge.to
+            }));
+
+            const data = JSON.stringify({ vertices, edges }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'paths_data.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert('Paths data has been saved as a JSON file.');
+        });
+    </script>
+</body>
+</html>
